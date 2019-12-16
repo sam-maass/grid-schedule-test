@@ -11,14 +11,16 @@
       </div>
       <div
         class="delivery-slot"
-        v-for="slot in deliverySlots"
+        v-for="slot in augmentedSlots"
         :key="slot.start + '-' + slot.end"
         :style="{
           gridRowStart: 1 + slot.start - startHour,
-          gridRowEnd: 1 + slot.end - startHour
+          gridRowEnd: 1 + slot.end - startHour,
+          gridColumn: `span ${slot.width}`
         }"
       >
-        {{ slot.start }}:00 - {{ slot.end }}:00
+        {{ slot.start }}:00 - {{ slot.end }}:00 <br />
+        Parallel: {{ slot.parallelSlots }}
       </div>
     </div>
   </div>
@@ -34,10 +36,11 @@ export default {
       endHour: 22,
       deliverySlots: [
         { start: 8, end: 10 },
-        { start: 8, end: 20 },
+        { start: 8, end: 18 },
         { start: 10, end: 12 },
         { start: 10, end: 16 },
-        { start: 15, end: 17 }
+        { start: 12, end: 24 },
+        { start: 16, end: 18 },
       ]
     };
   },
@@ -48,6 +51,33 @@ export default {
         list.push(i);
       }
       return list;
+    },
+    augmentedSlots() {
+      const tempArray = this.deliverySlots.map(slot => {
+        return {
+          ...slot,
+          parallelSlots: this.getParallelSlotsBetween(slot.start, slot.end)
+        };
+      });
+      const maxParallelSlots = Math.max(...tempArray.map(slot=>slot.parallelSlots)) || 1
+      return tempArray.map(slot=>{return{
+        ...slot,
+        width: Math.round(maxParallelSlots/ slot.parallelSlots)
+      }})
+    },
+  },
+  methods: {
+    getParallelSlotsBetween(start, end) {
+      var list = [];
+      for (var i = start; i < end; i++) {
+        list.push(this.getParallelSlots(i));
+      }    
+      return Math.max(...list);
+    },
+    getParallelSlots(hour) {
+      return this.deliverySlots.filter(
+        slot => slot.end > hour && slot.start <= hour
+      ).length;
     }
   }
 };
@@ -64,6 +94,7 @@ export default {
 }
 .grid {
   display: grid;
+  grid-auto-flow: dense;
   background: #eee;
   grid-template-columns: 40px auto;
 }
